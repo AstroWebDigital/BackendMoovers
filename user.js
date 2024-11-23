@@ -17,6 +17,12 @@ app.post('/utilisateur/create', async (req, res) => {
     return res.status(400).json({ error: 'Tous les champs sont requis : nom, prenom, email, mot_de_passe.' });
   }
 
+  // Vérification de la validité de l'email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'L\'adresse email fournie n\'est pas valide.' });
+  }
+
   try {
     // Vérifier si l'email existe déjà
     const checkEmailQuery = 'SELECT * FROM utilisateur WHERE email = $1';
@@ -48,6 +54,7 @@ app.post('/utilisateur/create', async (req, res) => {
     res.status(500).send('Erreur du serveur');
   }
 });
+
 
 const jwt = require('jsonwebtoken'); // Assurez-vous d'avoir cette bibliothèque pour le décodage JWT
 
