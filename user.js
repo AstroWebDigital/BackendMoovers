@@ -56,7 +56,6 @@ app.put('/utilisateur/update', async (req, res) => {
   const updateData = req.body; // Données mises à jour fournies par le client
   const SECRET_KEY = process.env.SECRET_KEY;
 
-
   if (!token) {
     return res.status(401).json({ error: 'Token non fourni. Accès non autorisé.' });
   }
@@ -74,22 +73,30 @@ app.put('/utilisateur/update', async (req, res) => {
       return res.status(404).json({ error: 'Utilisateur non trouvé.' });
     }
 
-    // Construire dynamiquement la requête SQL pour ne mettre à jour que les champs fournis
+    // Filtrer les champs pour ignorer les valeurs vides ou nulles
+    const filteredData = Object.entries(updateData).reduce((acc, [key, value]) => {
+      if (value !== '' && value !== null) {
+        acc[key] = value; // Ajouter uniquement les champs valides
+      }
+      return acc;
+    }, {});
+
+    if (Object.keys(filteredData).length === 0) {
+      return res.status(400).json({ error: 'Aucune donnée valide à mettre à jour.' });
+    }
+
+    // Construire dynamiquement la requête SQL pour ne mettre à jour que les champs valides
     const fields = [];
     const values = [];
     let query = 'UPDATE utilisateur SET ';
 
-    Object.entries(updateData).forEach(([key, value], index) => {
+    Object.entries(filteredData).forEach(([key, value], index) => {
       fields.push(`${key} = $${index + 1}`);
       values.push(value);
     });
 
-    if (fields.length === 0) {
-      return res.status(400).json({ error: 'Aucune donnée à mettre à jour.' });
-    }
-
     query += fields.join(', ') + ' WHERE id = $' + (fields.length + 1) + ' RETURNING *';
-    values.push(userId); // Ajouter l'ID utilisateur à la fin pour la clause WHERE
+    values.push(userId); // Ajouter l'ID utilisateur pour la clause WHERE
 
     // Exécuter la requête
     const result = await client.query(query, values);
@@ -106,6 +113,7 @@ app.put('/utilisateur/update', async (req, res) => {
     res.status(500).json({ error: 'Erreur du serveur.' });
   }
 });
+
 
 
 app.delete('/utilisateur/delete/:id', async (req, res) => {
