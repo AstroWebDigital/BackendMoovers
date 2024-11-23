@@ -49,14 +49,26 @@ app.post('/utilisateur/create', async (req, res) => {
   }
 });
 
-app.put('/utilisateur/:id', async (req, res) => {
-  const { id } = req.params; // ID de l'utilisateur à mettre à jour
-  const updateData = req.body; // Données mises à jour fournies par le client
+const jwt = require('jsonwebtoken'); // Assurez-vous d'avoir cette bibliothèque pour le décodage JWT
 
-  // Vérifier que l'utilisateur existe
+app.put('/utilisateur/update', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1]; // Récupérer le token depuis l'en-tête Authorization
+  const updateData = req.body; // Données mises à jour fournies par le client
+  const SECRET_KEY = process.env.SECRET_KEY;
+
+
+  if (!token) {
+    return res.status(401).json({ error: 'Token non fourni. Accès non autorisé.' });
+  }
+
   try {
+    // Décoder le token JWT pour récupérer l'ID utilisateur
+    const decoded = jwt.verify(token, SECRET_KEY);
+    const userId = decoded.id;
+
+    // Vérifier si l'utilisateur existe
     const checkUserQuery = 'SELECT * FROM utilisateur WHERE id = $1';
-    const userExists = await client.query(checkUserQuery, [id]);
+    const userExists = await client.query(checkUserQuery, [userId]);
 
     if (userExists.rows.length === 0) {
       return res.status(404).json({ error: 'Utilisateur non trouvé.' });
@@ -77,19 +89,24 @@ app.put('/utilisateur/:id', async (req, res) => {
     }
 
     query += fields.join(', ') + ' WHERE id = $' + (fields.length + 1) + ' RETURNING *';
-    values.push(id); // Ajouter l'ID comme dernière valeur pour la clause WHERE
+    values.push(userId); // Ajouter l'ID utilisateur à la fin pour la clause WHERE
 
+    // Exécuter la requête
     const result = await client.query(query, values);
 
     res.status(200).json({
       message: 'Informations utilisateur mises à jour avec succès.',
-      utilisateur: result.rows[0],
+      utilisateur: result.rows[0], // Retourner les informations mises à jour
     });
   } catch (err) {
+    if (err.name === 'JsonWebTokenError') {
+      return res.status(401).json({ error: 'Token invalide. Accès non autorisé.' });
+    }
     console.error('Erreur lors de la mise à jour de l\'utilisateur', err);
-    res.status(500).send('Erreur du serveur');
+    res.status(500).json({ error: 'Erreur du serveur.' });
   }
 });
+
 
 app.delete('/utilisateur/delete/:id', async (req, res) => {
   const { id } = req.params; // ID de l'utilisateur à supprimer
