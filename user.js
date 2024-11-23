@@ -49,6 +49,83 @@ app.post('/utilisateur', async (req, res) => {
   }
 });
 
+app.put('/utilisateur/:id', async (req, res) => {
+  const { id } = req.params; // ID de l'utilisateur à mettre à jour
+  const updateData = req.body; // Données mises à jour fournies par le client
+
+  // Vérifier que l'utilisateur existe
+  try {
+    const checkUserQuery = 'SELECT * FROM utilisateur WHERE id = $1';
+    const userExists = await client.query(checkUserQuery, [id]);
+
+    if (userExists.rows.length === 0) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé.' });
+    }
+
+    // Construire dynamiquement la requête SQL pour ne mettre à jour que les champs fournis
+    const fields = [];
+    const values = [];
+    let query = 'UPDATE utilisateur SET ';
+
+    Object.entries(updateData).forEach(([key, value], index) => {
+      fields.push(`${key} = $${index + 1}`);
+      values.push(value);
+    });
+
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'Aucune donnée à mettre à jour.' });
+    }
+
+    query += fields.join(', ') + ' WHERE id = $' + (fields.length + 1) + ' RETURNING *';
+    values.push(id); // Ajouter l'ID comme dernière valeur pour la clause WHERE
+
+    const result = await client.query(query, values);
+
+    res.status(200).json({
+      message: 'Informations utilisateur mises à jour avec succès.',
+      utilisateur: result.rows[0],
+    });
+  } catch (err) {
+    console.error('Erreur lors de la mise à jour de l\'utilisateur', err);
+    res.status(500).send('Erreur du serveur');
+  }
+});
+
+app.delete('/utilisateur/:id', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  const { id } = req.params; // ID fourni dans l'URL
+
+  if (!token) {
+    return res.status(401).json({ error: 'Token non fourni. Accès non autorisé.' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, SECRET_KEY);
+
+    // Vérifier si l'ID dans le token correspond à l'ID fourni
+    if (decoded.id !== id) {
+      return res.status(403).json({ error: 'Action non autorisée.' });
+    }
+
+    const checkUserQuery = 'SELECT * FROM utilisateur WHERE id = $1';
+    const userExists = await client.query(checkUserQuery, [id]);
+
+    if (userExists.rows.length === 0) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé.' });
+    }
+
+    const deleteUserQuery = 'DELETE FROM utilisateur WHERE id = $1';
+    await client.query(deleteUserQuery, [id]);
+
+    res.status(200).json({
+      message: 'Utilisateur supprimé avec succès.',
+      utilisateur_id: id,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur du serveur.' });
+  }
+});
+
 // Lancer le serveur
 const port = 3000;
 app.listen(port, () => {
