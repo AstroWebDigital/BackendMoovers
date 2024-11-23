@@ -116,13 +116,26 @@ app.put('/utilisateur/update', async (req, res) => {
 
 
 
-app.delete('/utilisateur/delete/:id', async (req, res) => {
-  const { id } = req.params; // ID de l'utilisateur à supprimer
+app.delete('/utilisateur/delete', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1]; // Extraire le token depuis l'en-tête Authorization
+  const SECRET_KEY = process.env.SECRET_KEY; // Assurez-vous que SECRET_KEY est bien configuré
+
+  if (!token) {
+    return res.status(401).json({ error: 'Token non fourni. Accès non autorisé.' });
+  }
 
   try {
+    // Décoder le token JWT pour récupérer l'ID utilisateur
+    const decoded = jwt.verify(token, SECRET_KEY);
+    const userId = decoded.id; // Récupérer l'ID utilisateur depuis le token
+
+    if (!userId) {
+      return res.status(400).json({ error: 'ID utilisateur non trouvé dans le token.' });
+    }
+
     // Vérifier si l'utilisateur existe
     const checkUserQuery = 'SELECT * FROM utilisateur WHERE id = $1';
-    const userExists = await client.query(checkUserQuery, [id]);
+    const userExists = await client.query(checkUserQuery, [userId]);
 
     if (userExists.rows.length === 0) {
       return res.status(404).json({ error: 'Utilisateur non trouvé.' });
@@ -130,17 +143,24 @@ app.delete('/utilisateur/delete/:id', async (req, res) => {
 
     // Supprimer l'utilisateur
     const deleteUserQuery = 'DELETE FROM utilisateur WHERE id = $1';
-    await client.query(deleteUserQuery, [id]);
+    await client.query(deleteUserQuery, [userId]);
 
     res.status(200).json({
       message: 'Utilisateur supprimé avec succès.',
-      utilisateur_id: id,
+      utilisateur_id: userId,
     });
   } catch (err) {
-    console.error('Erreur lors de la suppression de l\'utilisateur', err);
-    res.status(500).send('Erreur du serveur');
+    if (err.name === 'JsonWebTokenError') {
+      return res.status(401).json({ error: 'Token invalide. Accès non autorisé.' });
+    }
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token expiré. Veuillez vous reconnecter.' });
+    }
+    console.error('Erreur lors de la suppression de l\'utilisateur :', err);
+    res.status(500).json({ error: 'Erreur du serveur.' });
   }
 });
+
 
 
 // Lancer le serveur
