@@ -60,12 +60,29 @@ app.post('/login', async (req, res) => {
 });
 
 app.get('/utilisateur', async (req, res) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Token manquant ou invalide.' });
+  }
+
   try {
-    const result = await client.query('SELECT * FROM utilisateur');
-    res.json(result.rows);
+    // Décoder le token
+    const decoded = jwt.verify(token, SECRET_KEY);
+
+    // Rechercher l'utilisateur dans la base de données par ID
+    const query = 'SELECT * FROM utilisateur WHERE id = $1';
+    const result = await client.query(query, [decoded.id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé.' });
+    }
+
+    res.json(result.rows[0]); // Retourne les informations de l'utilisateur
   } catch (err) {
-    console.error('Erreur lors de la récupération des utilisateurs', err);
-    res.status(500).send('Erreur du serveur');
+    console.error('Erreur lors de la vérification du token ou de la récupération de l\'utilisateur', err);
+    res.status(403).json({ error: 'Token invalide ou expiré.' });
   }
 });
 
