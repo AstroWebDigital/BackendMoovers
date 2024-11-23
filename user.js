@@ -9,7 +9,7 @@ app.use(bodyParser.json());
 
 const SALT_ROUNDS = 10; // Pour bcrypt
 
-app.post('/utilisateur', async (req, res) => {
+app.post('/utilisateur/create', async (req, res) => {
   const { nom, prenom, email, mot_de_passe } = req.body;
 
   // Vérification des champs requis
@@ -91,22 +91,11 @@ app.put('/utilisateur/:id', async (req, res) => {
   }
 });
 
-app.delete('/utilisateur/:id', async (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  const { id } = req.params; // ID fourni dans l'URL
-
-  if (!token) {
-    return res.status(401).json({ error: 'Token non fourni. Accès non autorisé.' });
-  }
+app.delete('/utilisateur/delete/:id', async (req, res) => {
+  const { id } = req.params; // ID de l'utilisateur à supprimer
 
   try {
-    const decoded = jwt.verify(token, SECRET_KEY);
-
-    // Vérifier si l'ID dans le token correspond à l'ID fourni
-    if (decoded.id !== id) {
-      return res.status(403).json({ error: 'Action non autorisée.' });
-    }
-
+    // Vérifier si l'utilisateur existe
     const checkUserQuery = 'SELECT * FROM utilisateur WHERE id = $1';
     const userExists = await client.query(checkUserQuery, [id]);
 
@@ -114,6 +103,7 @@ app.delete('/utilisateur/:id', async (req, res) => {
       return res.status(404).json({ error: 'Utilisateur non trouvé.' });
     }
 
+    // Supprimer l'utilisateur
     const deleteUserQuery = 'DELETE FROM utilisateur WHERE id = $1';
     await client.query(deleteUserQuery, [id]);
 
@@ -122,9 +112,11 @@ app.delete('/utilisateur/:id', async (req, res) => {
       utilisateur_id: id,
     });
   } catch (err) {
-    res.status(500).json({ error: 'Erreur du serveur.' });
+    console.error('Erreur lors de la suppression de l\'utilisateur', err);
+    res.status(500).send('Erreur du serveur');
   }
 });
+
 
 // Lancer le serveur
 const port = 3000;
