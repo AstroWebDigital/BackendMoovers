@@ -82,6 +82,10 @@ app.get('/utilisateur', authenticateToken, async (req, res) => {
   }
 });
 
+const { app: messagerieApp, setupWebSocket } = require('./messagerie');
+app.use('/messagerie', messagerieApp);
+
+
 // Route pour les erreurs 404
 app.use((req, res) => {
   res.status(404).json({ error: 'Route introuvable.' });
