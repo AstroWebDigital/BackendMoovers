@@ -11,6 +11,10 @@ app.use(bodyParser.json()); // Middleware pour parser les JSON
 
 const SECRET_KEY = process.env.SECRET_KEY;
 
+app.get('/', (req, res) => {
+    res.send('Backend is running!');
+  });
+  
 // Middleware pour vérifier les tokens JWT
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
