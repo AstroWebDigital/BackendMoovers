@@ -175,9 +175,18 @@ app.post('/dernier-messages', async (req, res) => {
     const decoded = jwt.verify(token, SECRET_KEY);
     const utilisateur_id = decoded.id; // ID de l'utilisateur connecté
 
-    // Récupérer le dernier message de chaque conversation
+    // Récupérer le dernier message de chaque conversation avec les informations supplémentaires
     const derniersMessagesQuery = `
-      SELECT m1.*
+      SELECT 
+        m1.id AS message_id,
+        m1.expediteur_id,
+        m1.destinataire_id,
+        m1.message,
+        m1.date_envoye,
+        u.nom AS expediteur_nom,
+        u.prenom AS expediteur_prenom,
+        u.photo_de_profil,
+        EXTRACT(EPOCH FROM (NOW() - m1.date_envoye)) AS temps_ecoule
       FROM Messagerie m1
       INNER JOIN (
         SELECT 
@@ -192,19 +201,55 @@ app.post('/dernier-messages', async (req, res) => {
         LEAST(m1.expediteur_id, m1.destinataire_id) = m2.pair_user_2 AND
         m1.date_envoye = m2.last_message_date
       )
+      INNER JOIN Utilisateur u ON u.id = m1.expediteur_id
       ORDER BY m1.date_envoye DESC;
     `;
+
     const derniersMessagesResult = await client.query(derniersMessagesQuery, [utilisateur_id]);
+
+    // Formater la réponse pour inclure le temps écoulé en format lisible
+    const formattedMessages = derniersMessagesResult.rows.map(message => {
+      const secondsElapsed = Math.floor(message.temps_ecoule);
+      let timeAgo;
+
+      if (secondsElapsed < 60) {
+        timeAgo = `${secondsElapsed} secondes`;
+      } else if (secondsElapsed < 3600) {
+        const minutes = Math.floor(secondsElapsed / 60);
+        timeAgo = `${minutes} minute${minutes > 1 ? 's' : ''}`;
+      } else if (secondsElapsed < 86400) {
+        const hours = Math.floor(secondsElapsed / 3600);
+        timeAgo = `${hours} heure${hours > 1 ? 's' : ''}`;
+      } else {
+        const days = Math.floor(secondsElapsed / 86400);
+        timeAgo = `${days} jour${days > 1 ? 's' : ''}`;
+      }
+
+      return {
+        message_id: message.message_id,
+        expediteur_id: message.expediteur_id,
+        destinataire_id: message.destinataire_id,
+        message: message.message,
+        date_envoye: message.date_envoye,
+        temps_ecoule: timeAgo,
+        expediteur: {
+          nom: message.expediteur_nom,
+          prenom: message.expediteur_prenom,
+          photo_de_profil: message.photo_de_profil
+        }
+      };
+    });
 
     res.status(200).json({
       message: 'Derniers messages récupérés avec succès.',
-      derniersMessages: derniersMessagesResult.rows,
+      derniersMessages: formattedMessages,
     });
   } catch (err) {
     console.error('Erreur lors de la récupération des derniers messages :', err);
     res.status(500).json({ error: 'Erreur du serveur.' });
   }
 });
+
 
 
 // Exporter le module WebSocket et l'application Express
