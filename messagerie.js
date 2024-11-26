@@ -164,5 +164,48 @@ app.post('/historique', async (req, res) => {
   }
 });
 
+app.post('/dernier-messages', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Token non fourni. Accès non autorisé.' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, SECRET_KEY);
+    const utilisateur_id = decoded.id; // ID de l'utilisateur connecté
+
+    // Récupérer le dernier message de chaque conversation
+    const derniersMessagesQuery = `
+      SELECT m1.*
+      FROM Messagerie m1
+      INNER JOIN (
+        SELECT 
+          GREATEST(expediteur_id, destinataire_id) AS pair_user_1,
+          LEAST(expediteur_id, destinataire_id) AS pair_user_2,
+          MAX(date_envoye) AS last_message_date
+        FROM Messagerie
+        WHERE expediteur_id = $1 OR destinataire_id = $1
+        GROUP BY pair_user_1, pair_user_2
+      ) m2 ON (
+        GREATEST(m1.expediteur_id, m1.destinataire_id) = m2.pair_user_1 AND
+        LEAST(m1.expediteur_id, m1.destinataire_id) = m2.pair_user_2 AND
+        m1.date_envoye = m2.last_message_date
+      )
+      ORDER BY m1.date_envoye DESC;
+    `;
+    const derniersMessagesResult = await client.query(derniersMessagesQuery, [utilisateur_id]);
+
+    res.status(200).json({
+      message: 'Derniers messages récupérés avec succès.',
+      derniersMessages: derniersMessagesResult.rows,
+    });
+  } catch (err) {
+    console.error('Erreur lors de la récupération des derniers messages :', err);
+    res.status(500).json({ error: 'Erreur du serveur.' });
+  }
+});
+
+
 // Exporter le module WebSocket et l'application Express
 module.exports = { app, setupWebSocket };
