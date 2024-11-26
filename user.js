@@ -168,10 +168,8 @@ app.delete('/utilisateur/delete', async (req, res) => {
   }
 });
 
-
-
 // Lancer le serveur
-const port = 3000;
-app.listen(port, () => {
-  console.log(`Serveur en cours d'exécution sur http://localhost:${port}`);
+const PORT = process.env.PORT || 3002;
+app.listen(PORT, () => {
+  console.log(`Serveur démarré sur le port ${PORT}`);
 });

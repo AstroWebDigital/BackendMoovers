@@ -1,8 +1,10 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const client = require('./db');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const http = require('http');
+const { setupWebSocket } = require('./websocket'); // Module WebSocket
+const client = require('./db'); // Connexion à la base de données
 require('dotenv').config();
 
 const app = express();
@@ -10,10 +12,27 @@ app.use(bodyParser.json());
 
 const SECRET_KEY = process.env.SECRET_KEY;
 
+// Middleware pour vérifier les tokens JWT
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Token manquant ou invalide.' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, SECRET_KEY);
+    req.user = decoded; // Stocker les infos utilisateur dans req
+    next();
+  } catch (err) {
+    res.status(403).json({ error: 'Token invalide ou expiré.' });
+  }
+}
+
+// Route : Authentification utilisateur
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
-  
-  console.log("Requête reçue :", req.body); // Affiche les données envoyées par le client (email et mot de passe)
 
   if (!email || !password) {
     return res.status(400).json({ error: 'Email et mot de passe requis.' });
@@ -24,70 +43,59 @@ app.post('/login', async (req, res) => {
     const query = 'SELECT * FROM utilisateur WHERE email = $1';
     const result = await client.query(query, [email]);
 
-    console.log("Résultat de la requête DB :", result.rows); // Affiche les données récupérées depuis la base
-
     if (result.rows.length === 0) {
       return res.status(401).json({ error: 'Email ou mot de passe incorrect.' });
     }
 
     const user = result.rows[0];
 
-    // Vérifier que le mot de passe de l'utilisateur est défini
-    if (!user.mot_de_passe) { // Ici on vérifie `mot_de_passe` au lieu de `password`
-      return res.status(401).json({ error: 'Mot de passe incorrect.' });
-    }
-
-    // Comparer le mot de passe fourni avec celui dans la base
-    const passwordMatch = await bcrypt.compare(password, user.mot_de_passe); // On compare `password` avec `mot_de_passe`
-    
-    console.log("Mot de passe fourni :", password); // Affiche le mot de passe envoyé par l'utilisateur
-    console.log("Mot de passe dans la base de données :", user.mot_de_passe); // Affiche le mot de passe hashé dans la base
+    // Vérifier le mot de passe
+    const passwordMatch = await bcrypt.compare(password, user.mot_de_passe);
 
     if (!passwordMatch) {
       return res.status(401).json({ error: 'Email ou mot de passe incorrect.' });
     }
 
-    // Générer un token JWT si la connexion est réussie
+    // Générer un token JWT
     const token = jwt.sign({ id: user.id, email: user.email }, SECRET_KEY, { expiresIn: '1h' });
-
-    console.log("Token généré :", token); // Affiche le token JWT généré
 
     res.json({ message: 'Connexion réussie.', token });
   } catch (err) {
-    console.error('Erreur lors de l\'authentification', err);
-    res.status(500).send('Erreur du serveur');
+    console.error('Erreur lors de l\'authentification :', err);
+    res.status(500).json({ error: 'Erreur du serveur.' });
   }
 });
 
-app.get('/utilisateur', async (req, res) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ error: 'Token manquant ou invalide.' });
-  }
-
+// Route : Récupérer les informations de l'utilisateur connecté
+app.get('/utilisateur', authenticateToken, async (req, res) => {
   try {
-    // Décoder le token
-    const decoded = jwt.verify(token, SECRET_KEY);
-
-    // Rechercher l'utilisateur dans la base de données par ID
     const query = 'SELECT * FROM utilisateur WHERE id = $1';
-    const result = await client.query(query, [decoded.id]);
+    const result = await client.query(query, [req.user.id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Utilisateur non trouvé.' });
     }
 
-    res.json(result.rows[0]); // Retourne les informations de l'utilisateur
+    res.json(result.rows[0]);
   } catch (err) {
-    console.error('Erreur lors de la vérification du token ou de la récupération de l\'utilisateur', err);
-    res.status(403).json({ error: 'Token invalide ou expiré.' });
+    console.error('Erreur lors de la récupération des informations utilisateur :', err);
+    res.status(500).json({ error: 'Erreur du serveur.' });
   }
 });
 
-// Lancer le serveur sur le port 3000 avec node server.js
-const port = 3000;
-app.listen(port, () => {
-  console.log(`Serveur en cours d'exécution sur http://localhost:${port}`);
+// Importer les routes spécifiques de messagerie
+const { app: messagerieApp } = require('./messagerie');
+app.use('/messagerie', messagerieApp);
+
+// Configuration du serveur HTTP pour intégrer WebSocket
+const server = http.createServer(app);
+
+// Initialiser WebSocket
+setupWebSocket(server);
+
+// Lancer le serveur
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Serveur démarré sur le port ${PORT}`);
 });
+
