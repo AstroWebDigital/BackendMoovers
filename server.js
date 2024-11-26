@@ -1,6 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const bcrypt = require('bcrypt');
+const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const http = require('http');
 const { setupWebSocket } = require('./websocket'); // Module WebSocket
@@ -50,7 +50,7 @@ app.post('/login', async (req, res) => {
     const user = result.rows[0];
 
     // Vérifier le mot de passe
-    const passwordMatch = await bcrypt.compare(password, user.mot_de_passe);
+    const passwordMatch = await bcryptjs.compare(password, user.mot_de_passe);
 
     if (!passwordMatch) {
       return res.status(401).json({ error: 'Email ou mot de passe incorrect.' });
