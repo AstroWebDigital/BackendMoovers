@@ -8,7 +8,7 @@ const client = require('./db'); // Connexion à la base de données
 require('dotenv').config();
 
 const app = express();
-app.use(bodyParser.json()); // Middleware pour parser les JSON
+app.use(bodyParser.json());
 
 const SECRET_KEY = process.env.SECRET_KEY;
 
@@ -95,8 +95,7 @@ setupWebSocket(server);
 
 // Lancer le serveur
 const PORT = process.env.PORT || 3000;
-
-// Écoute sur le serveur HTTP
-server.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`Serveur démarré sur le port ${PORT}`);
 });
+
