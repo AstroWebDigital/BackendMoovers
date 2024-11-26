@@ -9,9 +9,6 @@ const app = express.Router(); // Utilisation de Router pour modulariser
 const SALT_ROUNDS = 10; // Pour bcrypt
 const SECRET_KEY = process.env.SECRET_KEY; // Assurez-vous que cette clé est définie dans votre fichier .env
 
-// Middleware pour parsing JSON
-app.use(express.json());
-
 // Route : Créer un utilisateur
 app.post('/create', async (req, res) => {
   const { nom, prenom, email, mot_de_passe } = req.body;
@@ -146,9 +143,4 @@ app.delete('/delete', async (req, res) => {
   }
 });
 
-// Exporter le router comme handler pour Vercel
-const handler = express();
-handler.use('/api/user', app);
-
-module.exports = (req, res) => handler(req, res);
-  
+module.exports = app; 
