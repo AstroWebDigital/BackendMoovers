@@ -12,6 +12,7 @@ app.use(bodyParser.json());
 const SALT_ROUNDS = 10; // Pour bcrypt
 const SECRET_KEY = process.env.SECRET_KEY; // Assurez-vous que cette clé est définie dans votre fichier .env
 
+
 // Gestion des connexions WebSocket
 const webSocketClients = new Map(); // Map pour stocker les connexions actives
 

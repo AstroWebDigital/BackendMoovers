@@ -2,15 +2,18 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const http = require('http');
-const { setupWebSocket } = require('./websocket'); // Module WebSocket
 const client = require('./db'); // Connexion à la base de données
 require('dotenv').config();
 
 const app = express();
-app.use(bodyParser.json());
+app.use(bodyParser.json()); // Middleware pour parser le JSON
 
 const SECRET_KEY = process.env.SECRET_KEY;
+
+// Route principale (GET /)
+app.get('/', (req, res) => {
+  res.send('Backend is running!');
+});
 
 // Middleware pour vérifier les tokens JWT
 function authenticateToken(req, res, next) {
@@ -30,7 +33,7 @@ function authenticateToken(req, res, next) {
   }
 }
 
-// Route : Authentification utilisateur
+// Route : Authentification utilisateur (POST /login)
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
@@ -39,7 +42,6 @@ app.post('/login', async (req, res) => {
   }
 
   try {
-    // Rechercher l'utilisateur dans la base de données
     const query = 'SELECT * FROM utilisateur WHERE email = $1';
     const result = await client.query(query, [email]);
 
@@ -48,15 +50,12 @@ app.post('/login', async (req, res) => {
     }
 
     const user = result.rows[0];
-
-    // Vérifier le mot de passe
     const passwordMatch = await bcryptjs.compare(password, user.mot_de_passe);
 
     if (!passwordMatch) {
       return res.status(401).json({ error: 'Email ou mot de passe incorrect.' });
     }
 
-    // Générer un token JWT
     const token = jwt.sign({ id: user.id, email: user.email }, SECRET_KEY, { expiresIn: '1h' });
 
     res.json({ message: 'Connexion réussie.', token });
@@ -66,7 +65,7 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// Route : Récupérer les informations de l'utilisateur connecté
+// Route : Récupérer les informations de l'utilisateur connecté (GET /utilisateur)
 app.get('/utilisateur', authenticateToken, async (req, res) => {
   try {
     const query = 'SELECT * FROM utilisateur WHERE id = $1';
@@ -83,19 +82,10 @@ app.get('/utilisateur', authenticateToken, async (req, res) => {
   }
 });
 
-// Importer les routes spécifiques de messagerie
-const { app: messagerieApp } = require('./messagerie');
-app.use('/messagerie', messagerieApp);
-
-// Configuration du serveur HTTP pour intégrer WebSocket
-const server = http.createServer(app);
-
-// Initialiser WebSocket
-setupWebSocket(server);
-
-// Lancer le serveur
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Serveur démarré sur le port ${PORT}`);
+// Route pour les erreurs 404
+app.use((req, res) => {
+  res.status(404).json({ error: 'Route introuvable.' });
 });
 
+// Exporter l'application pour Vercel
+module.exports = app;
