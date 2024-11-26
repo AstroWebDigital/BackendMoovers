@@ -1,30 +1,28 @@
 const express = require('express');
-const bodyParser = require('body-parser');
-const bcrypt = require('bcrypt');
+const bcryptjs = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const client = require('./db'); // Connexion à la base de données
 require('dotenv').config();
 
-const app = express();
-app.use(bodyParser.json());
+const app = express.Router(); // Utilisation de Router pour modulariser
 
 const SALT_ROUNDS = 10; // Pour bcrypt
+const SECRET_KEY = process.env.SECRET_KEY; // Assurez-vous que cette clé est définie dans votre fichier .env
 
-app.post('/utilisateur/create', async (req, res) => {
+// Route : Créer un utilisateur
+app.post('/create', async (req, res) => {
   const { nom, prenom, email, mot_de_passe } = req.body;
 
-  // Vérification des champs requis
   if (!nom || !prenom || !email || !mot_de_passe) {
     return res.status(400).json({ error: 'Tous les champs sont requis : nom, prenom, email, mot_de_passe.' });
   }
 
-  // Vérification de la validité de l'email
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
     return res.status(400).json({ error: 'L\'adresse email fournie n\'est pas valide.' });
   }
 
   try {
-    // Vérifier si l'email existe déjà
     const checkEmailQuery = 'SELECT * FROM utilisateur WHERE email = $1';
     const emailExists = await client.query(checkEmailQuery, [email]);
 
@@ -32,10 +30,8 @@ app.post('/utilisateur/create', async (req, res) => {
       return res.status(409).json({ error: 'Un utilisateur avec cet email existe déjà.' });
     }
 
-    // Hachage du mot de passe
-    const hashedPassword = await bcrypt.hash(mot_de_passe, SALT_ROUNDS);
+    const hashedPassword = await bcryptjs.hash(mot_de_passe, SALT_ROUNDS);
 
-    // Insertion de l'utilisateur dans la base de données
     const insertQuery = `
       INSERT INTO utilisateur (nom, prenom, email, mot_de_passe)
       VALUES ($1, $2, $3, $4)
@@ -43,7 +39,6 @@ app.post('/utilisateur/create', async (req, res) => {
     `;
     const result = await client.query(insertQuery, [nom, prenom, email, hashedPassword]);
 
-    // Retourner l'utilisateur nouvellement créé (sans mot de passe)
     const newUser = result.rows[0];
     res.status(201).json({
       message: 'Utilisateur créé avec succès.',
@@ -51,28 +46,23 @@ app.post('/utilisateur/create', async (req, res) => {
     });
   } catch (err) {
     console.error('Erreur lors de la création de l\'utilisateur', err);
-    res.status(500).send('Erreur du serveur');
+    res.status(500).json({ error: 'Erreur du serveur.' });
   }
 });
 
-
-const jwt = require('jsonwebtoken'); // Assurez-vous d'avoir cette bibliothèque pour le décodage JWT
-
-app.put('/utilisateur/update', async (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1]; // Récupérer le token depuis l'en-tête Authorization
-  const updateData = req.body; // Données mises à jour fournies par le client
-  const SECRET_KEY = process.env.SECRET_KEY;
+// Route : Mettre à jour un utilisateur
+app.put('/update', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  const updateData = req.body;
 
   if (!token) {
     return res.status(401).json({ error: 'Token non fourni. Accès non autorisé.' });
   }
 
   try {
-    // Décoder le token JWT pour récupérer l'ID utilisateur
     const decoded = jwt.verify(token, SECRET_KEY);
     const userId = decoded.id;
 
-    // Vérifier si l'utilisateur existe
     const checkUserQuery = 'SELECT * FROM utilisateur WHERE id = $1';
     const userExists = await client.query(checkUserQuery, [userId]);
 
@@ -80,10 +70,9 @@ app.put('/utilisateur/update', async (req, res) => {
       return res.status(404).json({ error: 'Utilisateur non trouvé.' });
     }
 
-    // Filtrer les champs pour ignorer les valeurs vides ou nulles
     const filteredData = Object.entries(updateData).reduce((acc, [key, value]) => {
       if (value !== '' && value !== null) {
-        acc[key] = value; // Ajouter uniquement les champs valides
+        acc[key] = value;
       }
       return acc;
     }, {});
@@ -92,7 +81,6 @@ app.put('/utilisateur/update', async (req, res) => {
       return res.status(400).json({ error: 'Aucune donnée valide à mettre à jour.' });
     }
 
-    // Construire dynamiquement la requête SQL pour ne mettre à jour que les champs valides
     const fields = [];
     const values = [];
     let query = 'UPDATE utilisateur SET ';
@@ -103,14 +91,13 @@ app.put('/utilisateur/update', async (req, res) => {
     });
 
     query += fields.join(', ') + ' WHERE id = $' + (fields.length + 1) + ' RETURNING *';
-    values.push(userId); // Ajouter l'ID utilisateur pour la clause WHERE
+    values.push(userId);
 
-    // Exécuter la requête
     const result = await client.query(query, values);
 
     res.status(200).json({
       message: 'Informations utilisateur mises à jour avec succès.',
-      utilisateur: result.rows[0], // Retourner les informations mises à jour
+      utilisateur: result.rows[0],
     });
   } catch (err) {
     if (err.name === 'JsonWebTokenError') {
@@ -121,26 +108,18 @@ app.put('/utilisateur/update', async (req, res) => {
   }
 });
 
-
-
-app.delete('/utilisateur/delete', async (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1]; // Extraire le token depuis l'en-tête Authorization
-  const SECRET_KEY = process.env.SECRET_KEY; // Assurez-vous que SECRET_KEY est bien configuré
+// Route : Supprimer un utilisateur
+app.delete('/delete', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
 
   if (!token) {
     return res.status(401).json({ error: 'Token non fourni. Accès non autorisé.' });
   }
 
   try {
-    // Décoder le token JWT pour récupérer l'ID utilisateur
     const decoded = jwt.verify(token, SECRET_KEY);
-    const userId = decoded.id; // Récupérer l'ID utilisateur depuis le token
+    const userId = decoded.id;
 
-    if (!userId) {
-      return res.status(400).json({ error: 'ID utilisateur non trouvé dans le token.' });
-    }
-
-    // Vérifier si l'utilisateur existe
     const checkUserQuery = 'SELECT * FROM utilisateur WHERE id = $1';
     const userExists = await client.query(checkUserQuery, [userId]);
 
@@ -148,7 +127,6 @@ app.delete('/utilisateur/delete', async (req, res) => {
       return res.status(404).json({ error: 'Utilisateur non trouvé.' });
     }
 
-    // Supprimer l'utilisateur
     const deleteUserQuery = 'DELETE FROM utilisateur WHERE id = $1';
     await client.query(deleteUserQuery, [userId]);
 
@@ -160,16 +138,9 @@ app.delete('/utilisateur/delete', async (req, res) => {
     if (err.name === 'JsonWebTokenError') {
       return res.status(401).json({ error: 'Token invalide. Accès non autorisé.' });
     }
-    if (err.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'Token expiré. Veuillez vous reconnecter.' });
-    }
     console.error('Erreur lors de la suppression de l\'utilisateur :', err);
     res.status(500).json({ error: 'Erreur du serveur.' });
   }
 });
 
-// Lancer le serveur
-const PORT = process.env.PORT || 3002;
-app.listen(PORT, () => {
-  console.log(`Serveur démarré sur le port ${PORT}`);
-});
+module.exports = app; 

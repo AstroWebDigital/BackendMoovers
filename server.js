@@ -85,6 +85,10 @@ app.get('/utilisateur', authenticateToken, async (req, res) => {
 const { app: messagerieApp, setupWebSocket } = require('./messagerie');
 app.use('/messagerie', messagerieApp);
 
+const userRoutes = require('./user'); // Importer les routes utilisateur
+app.use('/utilisateur', userRoutes); // Ajouter le préfixe /utilisateur
+
+
 
 // Route pour les erreurs 404
 app.use((req, res) => {
