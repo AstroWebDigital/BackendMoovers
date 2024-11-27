@@ -116,7 +116,6 @@ app.post('/envoyer', async (req, res) => {
   }
 });
 
-// API pour récupérer l’historique des messages
 app.post('/historique', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const { utilisateur_id } = req.body;
@@ -147,22 +146,34 @@ app.post('/historique', async (req, res) => {
 
     // Récupérer l'historique des messages
     const messagesQuery = `
-      SELECT * FROM Messagerie
+      SELECT id, expediteur_id, destinataire_id, message, date_envoye
+      FROM Messagerie
       WHERE (expediteur_id = $1 AND destinataire_id = $2)
          OR (expediteur_id = $2 AND destinataire_id = $1)
       ORDER BY date_envoye ASC;
     `;
     const messagesResult = await client.query(messagesQuery, [expediteur_id, utilisateur_id]);
 
+    // Formater les messages pour inclure une distinction entre l'utilisateur connecté et l'autre
+    const formattedMessages = messagesResult.rows.map(message => ({
+      id: message.id,
+      expediteur_id: message.expediteur_id,
+      destinataire_id: message.destinataire_id,
+      message: message.message,
+      date_envoye: message.date_envoye,
+      is_sent_by_me: message.expediteur_id === expediteur_id, // Indique si c'est envoyé par l'utilisateur connecté
+    }));
+
     res.status(200).json({
       message: 'Historique des messages récupéré avec succès.',
-      historique: messagesResult.rows,
+      historique: formattedMessages,
     });
   } catch (err) {
     console.error('Erreur lors de la récupération des messages :', err);
     res.status(500).json({ error: 'Erreur du serveur.' });
   }
 });
+
 
 app.post('/dernier-messages', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];

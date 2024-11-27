@@ -144,9 +144,10 @@ app.delete('/delete', async (req, res) => {
 });
 
 // Route : Voir les informations d’un utilisateur
-app.get('/info', async (req, res) => {
+// Route : Voir les informations d’un utilisateur
+app.post('/info', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
-  const { utilisateur_id } = req.query; // ID de l'utilisateur cible passé en paramètre
+  const { utilisateur_id } = req.body; // ID de l'utilisateur cible passé dans le corps de la requête
 
   if (!token) {
     return res.status(401).json({ error: 'Token non fourni. Accès non autorisé.' });
@@ -187,5 +188,6 @@ app.get('/info', async (req, res) => {
     res.status(500).json({ error: 'Erreur du serveur.' });
   }
 });
+
 
 module.exports = app; 
