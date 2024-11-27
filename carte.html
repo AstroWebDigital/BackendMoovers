@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Carte Apple Maps Style</title>
+  <title>Carte OpenStreetMap</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -10,7 +10,7 @@
       margin: 0;
       padding: 0;
       height: 100%;
-      overflow: hidden;
+      overflow: hidden; /* Supprime la barre de défilement */
     }
     .popup-content {
       display: flex;
@@ -30,7 +30,7 @@
       margin-top: 5px;
     }
     .leaflet-control-zoom {
-      display: none; /* Supprime les boutons de zoom */
+      display: none !important; /* Supprime les boutons de zoom */
     }
   </style>
 </head>
@@ -41,25 +41,27 @@
     const map = L.map('map', {
       center: [43.6047, 1.4442], // Latitude et Longitude pour Toulouse
       zoom: 13,
-      zoomControl: false,
+      zoomControl: false, // Supprime les boutons de zoom
     });
 
-    // Ajouter des tuiles avec un style clair similaire à Apple Maps
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
-      subdomains: 'abcd',
-      maxZoom: 19,
+    // Ajouter des tuiles OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19
     }).addTo(map);
 
-    // Fonction pour récupérer les événements
+    // Fonction pour récupérer les données depuis l'API
     async function fetchEvents() {
       try {
+        // Remplacez l'URL par celle de votre API
         const response = await fetch('https://backend-moovers.vercel.app/evenements');
         if (!response.ok) {
           throw new Error(`Erreur HTTP ! statut : ${response.status}`);
         }
 
         const events = await response.json();
+
+        // Vérifier si des événements existent
         if (events.length === 0) {
           console.log('Aucun événement trouvé.');
           return;
@@ -67,10 +69,11 @@
 
         // Ajouter chaque événement sur la carte
         events.forEach(event => {
+          // Vérifier si les coordonnées sont valides
           if (event.latitude && event.longitude) {
             const marker = L.marker([event.latitude, event.longitude]).addTo(map);
 
-            // Ajouter un pop-up
+            // Ajouter un pop-up avec les informations de l'événement
             marker.bindPopup(`
               <div class="popup-content">
                 <div class="popup-title">${event.titre}</div>
@@ -78,6 +81,8 @@
                 <div class="popup-desc">${event.description || 'Aucune description disponible.'}</div>
               </div>
             `);
+          } else {
+            console.warn('Coordonnées manquantes pour l\'événement :', event);
           }
         });
       } catch (error) {
