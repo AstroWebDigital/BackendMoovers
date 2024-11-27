@@ -89,11 +89,13 @@ app.use('/messagerie', messagerieApp);
 const userRoutes = require('./user');
 app.use('/utilisateur', userRoutes); // Ajouter le préfixe /utilisateur
 
+const eventsRoutes = require('./events');
+app.use('/evenements', eventsRoutes); // Ajouter le préfixe /evenements
+
 
 app.get('/carte', (req, res) => {
   res.sendFile(path.join(__dirname, 'carte.html')); // Assurez-vous que le fichier carte.html est bien présent
 });
-
 
 // Route pour les erreurs 404
 app.use((req, res) => {
