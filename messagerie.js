@@ -185,8 +185,8 @@ app.post('/dernier-messages', async (req, res) => {
     const decoded = jwt.verify(token, SECRET_KEY);
     const utilisateur_id = decoded.id; // ID de l'utilisateur connecté
 
-    // Récupérer le dernier message de chaque conversation avec les informations supplémentaires
-    const derniersMessagesQuery = 
+    // Requête SQL pour récupérer les derniers messages
+    const derniersMessagesQuery = `
       SELECT 
         m1.id AS message_id,
         m1.expediteur_id,
@@ -213,26 +213,26 @@ app.post('/dernier-messages', async (req, res) => {
       )
       INNER JOIN Utilisateur u ON u.id = m1.expediteur_id
       ORDER BY m1.date_envoye DESC;
-    ;
+    `;
 
     const derniersMessagesResult = await client.query(derniersMessagesQuery, [utilisateur_id]);
 
-    // Formater la réponse pour inclure le temps écoulé en format lisible
+    // Formater la réponse pour inclure le temps écoulé dans un format lisible
     const formattedMessages = derniersMessagesResult.rows.map(message => {
       const secondsElapsed = Math.floor(message.temps_ecoule);
       let timeAgo;
 
       if (secondsElapsed < 60) {
-        timeAgo = ${secondsElapsed} secondes;
+        timeAgo = `${secondsElapsed} seconde${secondsElapsed > 1 ? 's' : ''}`;
       } else if (secondsElapsed < 3600) {
         const minutes = Math.floor(secondsElapsed / 60);
-        timeAgo = ${minutes} minute${minutes > 1 ? 's' : ''};
+        timeAgo = `${minutes} minute${minutes > 1 ? 's' : ''}`;
       } else if (secondsElapsed < 86400) {
         const hours = Math.floor(secondsElapsed / 3600);
-        timeAgo = ${hours} heure${hours > 1 ? 's' : ''};
+        timeAgo = `${hours} heure${hours > 1 ? 's' : ''}`;
       } else {
         const days = Math.floor(secondsElapsed / 86400);
-        timeAgo = ${days} jour${days > 1 ? 's' : ''};
+        timeAgo = `${days} jour${days > 1 ? 's' : ''}`;
       }
 
       return {
@@ -245,8 +245,8 @@ app.post('/dernier-messages', async (req, res) => {
         expediteur: {
           nom: message.expediteur_nom,
           prenom: message.expediteur_prenom,
-          photo_de_profil: message.photo_de_profil
-        }
+          photo_de_profil: message.photo_de_profil,
+        },
       };
     });
 
