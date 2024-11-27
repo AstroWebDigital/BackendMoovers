@@ -89,7 +89,9 @@ const userRoutes = require('./user');
 app.use('/utilisateur', userRoutes); // Ajouter le préfixe /utilisateur
 
 
-
+app.get('/carte', (req, res) => {
+  res.sendFile(path.join(__dirname, 'carte.html'));
+});
 
 // Route pour les erreurs 404
 app.use((req, res) => {
