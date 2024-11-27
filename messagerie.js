@@ -250,13 +250,14 @@ app.post('/dernier-messages', async (req, res) => {
       };
     });
 
-    // Retourner directement le tableau
-    res.status(200).json(formattedMessages);
+    // Envelopper la réponse dans un objet avec une clé "Response"
+    res.status(200).json({ Response: formattedMessages });
   } catch (err) {
     console.error('Erreur lors de la récupération des derniers messages :', err);
     res.status(500).json({ error: 'Erreur du serveur.' });
   }
 });
+
 
 
 app.post('/amis/demande', async (req, res) => {
