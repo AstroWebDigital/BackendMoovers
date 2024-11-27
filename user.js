@@ -162,8 +162,13 @@ app.post('/infos', async (req, res) => {
     const decoded = jwt.verify(token, SECRET_KEY);
     console.log('ID utilisateur connecté :', decoded.id);
 
+    // Requête SQL pour récupérer toutes les colonnes sauf le mot de passe
     const userQuery = `
-      SELECT nom, prenom, photo_de_profil, bio, photo_feed, date_inscription
+      SELECT
+        id, nom, prenom, photo_de_profil, bio, photo_feed, email, linkedin,
+        instagram, facebook, date_inscription, date_de_naissance, code_postale,
+        adresse_postale, nom_d_entreprise, adresse_entreprise, site,
+        activite_entreprise, domaine_activite, tags
       FROM utilisateur
       WHERE id = $1
     `;
@@ -174,15 +179,38 @@ app.post('/infos', async (req, res) => {
     }
 
     const userInfo = userResult.rows[0];
+
+    // Gestion de photo_feed comme tableau (si stocké sous forme JSON ou tableau)
+    const photoFeed = Array.isArray(userInfo.photo_feed)
+      ? userInfo.photo_feed
+      : JSON.parse(userInfo.photo_feed || '[]');
+
+    // Limitation à 9 photos pour photo_feed
+    const limitedPhotoFeed = photoFeed.slice(0, 9);
+
     res.status(200).json({
       message: 'Informations utilisateur récupérées avec succès.',
       utilisateur: {
+        id: userInfo.id,
         nom: userInfo.nom,
         prenom: userInfo.prenom,
         photo_de_profil: userInfo.photo_de_profil,
         bio: userInfo.bio,
-        photo_feed: userInfo.photo_feed,
+        photo_feed: limitedPhotoFeed,
+        email: userInfo.email,
+        linkedin: userInfo.linkedin,
+        instagram: userInfo.instagram,
+        facebook: userInfo.facebook,
         date_inscription: userInfo.date_inscription,
+        date_de_naissance: userInfo.date_de_naissance,
+        code_postale: userInfo.code_postale,
+        adresse_postale: userInfo.adresse_postale,
+        nom_d_entreprise: userInfo.nom_d_entreprise,
+        adresse_entreprise: userInfo.adresse_entreprise,
+        site: userInfo.site,
+        activite_entreprise: userInfo.activite_entreprise,
+        domaine_activite: userInfo.domaine_activite,
+        tags: userInfo.tags,
       },
     });
   } catch (err) {
