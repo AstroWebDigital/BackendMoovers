@@ -13,7 +13,7 @@ app.use(bodyParser.json()); // Middleware pour parser le JSON
 const SECRET_KEY = process.env.SECRET_KEY;
 
 // Route pour récupérer les événements
-app.get('/api/events', async (req, res) => {
+app.get('/events', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 

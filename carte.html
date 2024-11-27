@@ -6,9 +6,10 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <style>
-    #map {
-      width: 100%;
-      height: 100vh;
+    html, body, #map {
+      margin: 0;
+      padding: 0;
+      height: 100%;
       overflow: hidden; /* Supprime la barre de défilement */
     }
     .popup-content {
@@ -29,7 +30,7 @@
       margin-top: 5px;
     }
     .leaflet-control-zoom {
-      display: none; /* Cache les boutons de zoom (+ et -) */
+      display: none; /* Supprime les boutons de zoom */
     }
   </style>
 </head>
@@ -43,17 +44,16 @@
       zoomControl: false, // Supprime les boutons de zoom
     });
 
-    // Ajouter des tuiles OpenStreetMap en mode nocturne
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '© OpenStreetMap contributors © CARTO',
-      subdomains: 'abcd',
+    // Ajouter des tuiles avec un style clair similaire à Google Maps
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
       maxZoom: 19
     }).addTo(map);
 
     // Fonction pour récupérer les données depuis l'API
     async function fetchEvents() {
       try {
-        const response = await fetch('https://backend-moovers.vercel.app/api/events'); // Remplacez par l'URL de votre API
+        const response = await fetch('https://backend-moovers.vercel.app/events'); // Remplacez par l'URL de votre API
         if (!response.ok) {
           throw new Error(`Erreur HTTP ! statut : ${response.status}`);
         }
