@@ -1,21 +1,11 @@
 const express = require('express');
-const { Pool } = require('pg');
-const bodyParser = require('body-parser');
-const path = require('path');
-const bcryptjs = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const client = require('./db'); // Connexion à la base de données
-require('dotenv').config();
-
-const app = express();
-app.use(bodyParser.json()); // Middleware pour parser le JSON
-
-const SECRET_KEY = process.env.SECRET_KEY;
+const client = require('./db'); // Import de la connexion à la base de données
+const router = express.Router(); // Utilisation du router Express
 
 // Route pour récupérer les événements
-app.get('/events', async (req, res) => {
+router.get('/events', async (req, res) => {
   try {
-    const result = await pool.query(`
+    const result = await client.query(`
       SELECT 
         id, 
         titre, 
@@ -27,12 +17,13 @@ app.get('/events', async (req, res) => {
       FROM evenement
     `);
 
-    res.json(result.rows); // Retourne les événements sous forme de JSON
+    // Retourne les événements sous forme de JSON
+    res.json(result.rows);
   } catch (error) {
     console.error('Erreur lors de la récupération des événements :', error);
     res.status(500).json({ error: 'Une erreur est survenue lors de la récupération des événements.' });
   }
 });
 
-// Export pour Vercel
-module.exports = app;
+// Exporter le router pour utilisation dans `server.js`
+module.exports = router;
