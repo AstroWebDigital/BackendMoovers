@@ -144,25 +144,26 @@ app.delete('/delete', async (req, res) => {
 });
 
 // Route : Voir les informations d’un utilisateur
-// Route : Voir les informations d’un utilisateur
 app.post('/info', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const { utilisateur_id } = req.body; // ID de l'utilisateur cible passé dans le corps de la requête
 
+  // Vérification de la présence du token
   if (!token) {
     return res.status(401).json({ error: 'Token non fourni. Accès non autorisé.' });
   }
 
+  // Vérification de la présence de l'utilisateur_id dans le corps de la requête
   if (!utilisateur_id) {
     return res.status(400).json({ error: 'utilisateur_id est requis.' });
   }
 
   try {
-    // Vérifier et décoder le token
+    // Décoder le token pour obtenir l'utilisateur connecté
     const decoded = jwt.verify(token, SECRET_KEY);
     const expediteur_id = decoded.id; // ID de l'utilisateur connecté
 
-    // Vérifier si l'utilisateur cible existe
+    // Vérifier si l'utilisateur cible existe dans la base de données
     const userQuery = `
       SELECT id, nom, prenom, email, date_creation
       FROM utilisateur
@@ -181,13 +182,17 @@ app.post('/info', async (req, res) => {
       utilisateur: userInfo,
     });
   } catch (err) {
+    // Gestion des erreurs JWT
     if (err.name === 'JsonWebTokenError') {
       return res.status(401).json({ error: 'Token invalide. Accès non autorisé.' });
     }
+
+    // Log des erreurs de serveur pour le debug
     console.error("Erreur lors de la récupération des informations de l'utilisateur :", err);
     res.status(500).json({ error: 'Erreur du serveur.' });
   }
 });
+
 
 
 module.exports = app; 
