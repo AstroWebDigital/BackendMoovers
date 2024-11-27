@@ -1,5 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const path = require('path');
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const client = require('./db'); // Connexion à la base de données
@@ -90,8 +91,9 @@ app.use('/utilisateur', userRoutes); // Ajouter le préfixe /utilisateur
 
 
 app.get('/carte', (req, res) => {
-  res.sendFile(path.join(__dirname, 'carte.html'));
+  res.sendFile(path.join(__dirname, 'carte.html')); // Assurez-vous que le fichier carte.html est bien présent
 });
+
 
 // Route pour les erreurs 404
 app.use((req, res) => {
