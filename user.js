@@ -163,7 +163,7 @@ app.post('/infos', async (req, res) => {
     console.log('ID utilisateur connecté :', decoded.id);
 
     const userQuery = `
-      SELECT nom, prenom, photo_de_profil, date_inscription
+      SELECT nom, prenom, photo_de_profil, bio, photo_feed, date_inscription
       FROM utilisateur
       WHERE id = $1
     `;
@@ -180,6 +180,8 @@ app.post('/infos', async (req, res) => {
         nom: userInfo.nom,
         prenom: userInfo.prenom,
         photo_de_profil: userInfo.photo_de_profil,
+        bio: userInfo.bio,
+        photo_feed: userInfo.photo_feed,
         date_inscription: userInfo.date_inscription,
       },
     });
@@ -191,6 +193,7 @@ app.post('/infos', async (req, res) => {
     res.status(500).json({ error: 'Erreur du serveur.' });
   }
 });
+
 
 app.get('/search', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1]; // Récupérer le token du header Authorization
