@@ -174,7 +174,6 @@ app.post('/historique', async (req, res) => {
   }
 });
 
-
 app.post('/dernier-messages', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
 
@@ -262,7 +261,6 @@ app.post('/dernier-messages', async (req, res) => {
     res.status(500).json({ error: 'Erreur du serveur.' });
   }
 });
-
 
 app.post('/amis/demande', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
