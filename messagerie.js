@@ -240,15 +240,13 @@ app.post('/dernier-messages', async (req, res) => {
 
       return {
         message_id: message.message_id,
-        autre_utilisateur: {
-          id: message.expediteur_id === utilisateur_id ? message.destinataire_id : message.expediteur_id,
-          nom: message.autre_utilisateur_nom,
-          prenom: message.autre_utilisateur_prenom,
-          photo_de_profil: message.photo_de_profil
-        },
+        id: message.expediteur_id === utilisateur_id ? message.destinataire_id : message.expediteur_id,
+        nom: message.autre_utilisateur_nom,
+        prenom: message.autre_utilisateur_prenom,
+        photo_de_profil: message.photo_de_profil,
         message: message.message,
         date_envoye: message.date_envoye,
-        temps_ecoule: timeAgo
+        temps_ecoule: timeAgo,
       };
     });
 
