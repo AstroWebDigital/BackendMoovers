@@ -143,4 +143,51 @@ app.delete('/delete', async (req, res) => {
   }
 });
 
+app.post('/infos', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  const { utilisateur_id } = req.body; // ID de l'utilisateur cible
+
+  if (!token) {
+    return res.status(401).json({ error: 'Token non fourni. Accès non autorisé.' });
+  }
+
+  if (!utilisateur_id) {
+    return res.status(400).json({ error: 'utilisateur_id est requis.' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, SECRET_KEY);
+    const utilisateur_connecte_id = decoded.id;
+
+    // Requête SQL avec `date_inscription`
+    const userQuery = `
+      SELECT nom, prenom, photo_de_profil, date_inscription
+      FROM utilisateur
+      WHERE id = $1
+    `;
+    const userResult = await client.query(userQuery, [utilisateur_id]);
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé.' });
+    }
+
+    const userInfo = userResult.rows[0];
+    res.status(200).json({
+      message: 'Informations utilisateur récupérées avec succès.',
+      utilisateur: {
+        nom: userInfo.nom,
+        prenom: userInfo.prenom,
+        photo_de_profil: userInfo.photo_de_profil,
+        date_inscription: userInfo.date_inscription,
+      },
+    });
+  } catch (err) {
+    if (err.name === 'JsonWebTokenError') {
+      return res.status(401).json({ error: 'Token invalide. Accès non autorisé.' });
+    }
+    console.error('Erreur serveur :', err);
+    res.status(500).json({ error: 'Erreur du serveur.' });
+  }
+});
+
 module.exports = app; 
