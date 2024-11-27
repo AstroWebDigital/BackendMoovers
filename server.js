@@ -96,6 +96,10 @@ app.get('/carte', (req, res) => {
   res.sendFile(path.join(__dirname, 'carte.html')); // Assurez-vous que le fichier carte.html est bien présent
 });
 
+const cors = require('cors');
+app.use(cors()); // Permet toutes les origines (accès global)
+
+
 // Route pour les erreurs 404
 app.use((req, res) => {
   res.status(404).json({ error: 'Route introuvable.' });
