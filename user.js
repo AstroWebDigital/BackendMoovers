@@ -193,36 +193,62 @@ app.post('/infos', async (req, res) => {
 });
 
 app.get('/search', async (req, res) => {
-  const query = req.query.q; // Récupérer le paramètre de recherche
+  const token = req.headers.authorization?.split(' ')[1]; // Récupérer le token du header Authorization
+  const query = req.query.q; // Le paramètre de recherche
+  const page = parseInt(req.query.page) || 1; // Page par défaut : 1
+  const limit = parseInt(req.query.limit) || 10; // Nombre de résultats par page par défaut : 10
+  const offset = (page - 1) * limit; // Calcul pour l'offset
+
+  if (!token) {
+    return res.status(401).json({ error: 'Token non fourni. Accès non autorisé.' });
+  }
 
   if (!query || query.trim() === '') {
     return res.status(400).json({ error: 'Le paramètre de recherche "q" est requis.' });
   }
 
   try {
-    // Recherche dans la table "utilisateur"
+    // Vérification du token JWT
+    const decoded = jwt.verify(token, SECRET_KEY);
+    const userId = decoded.id; // ID de l'utilisateur connecté (issu du token)
+    
+    console.log(`Utilisateur connecté : ${userId}`);
+
+    // Recherche dans la table "utilisateur" avec pagination
     const utilisateursQuery = `
       SELECT id, nom, prenom, email 
       FROM utilisateur
       WHERE nom ILIKE $1 OR prenom ILIKE $1 OR email ILIKE $1
+      LIMIT $2 OFFSET $3
     `;
-    const utilisateurs = await client.query(utilisateursQuery, [`%${query}%`]);
+    const utilisateurs = await client.query(utilisateursQuery, [`%${query}%`, limit, offset]);
 
-    // Recherche dans la table "evenement"
+    // Recherche dans la table "evenement" avec pagination
     const evenementsQuery = `
       SELECT id, titre, description, lieu, date, heure 
       FROM evenement
       WHERE titre ILIKE $1 OR description ILIKE $1 OR lieu ILIKE $1
+      LIMIT $2 OFFSET $3
     `;
-    const evenements = await client.query(evenementsQuery, [`%${query}%`]);
+    const evenements = await client.query(evenementsQuery, [`%${query}%`, limit, offset]);
 
-    // Combinez les résultats et retournez-les
+    // Retourner les résultats avec pagination
     res.status(200).json({
+      message: 'Recherche effectuée avec succès.',
       utilisateurs: utilisateurs.rows,
       evenements: evenements.rows,
+      pagination: {
+        page,
+        limit,
+        utilisateurs_count: utilisateurs.rowCount, // Nombre de résultats dans cette page pour les utilisateurs
+        evenements_count: evenements.rowCount, // Nombre de résultats dans cette page pour les événements
+      },
     });
-  } catch (error) {
-    console.error('Erreur lors de la recherche :', error);
+  } catch (err) {
+    if (err.name === 'JsonWebTokenError') {
+      return res.status(401).json({ error: 'Token invalide. Accès non autorisé.' });
+    }
+    console.error('Erreur lors de la recherche :', err);
     res.status(500).json({ error: 'Erreur serveur lors de la recherche.' });
   }
 });
