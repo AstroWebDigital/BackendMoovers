@@ -192,5 +192,40 @@ app.post('/infos', async (req, res) => {
   }
 });
 
+app.get('/search', async (req, res) => {
+  const query = req.query.q; // Récupérer le paramètre de recherche
+
+  if (!query || query.trim() === '') {
+    return res.status(400).json({ error: 'Le paramètre de recherche "q" est requis.' });
+  }
+
+  try {
+    // Recherche dans la table "utilisateur"
+    const utilisateursQuery = `
+      SELECT id, nom, prenom, email 
+      FROM utilisateur
+      WHERE nom ILIKE $1 OR prenom ILIKE $1 OR email ILIKE $1
+    `;
+    const utilisateurs = await client.query(utilisateursQuery, [`%${query}%`]);
+
+    // Recherche dans la table "evenement"
+    const evenementsQuery = `
+      SELECT id, titre, description, lieu, date, heure 
+      FROM evenement
+      WHERE titre ILIKE $1 OR description ILIKE $1 OR lieu ILIKE $1
+    `;
+    const evenements = await client.query(evenementsQuery, [`%${query}%`]);
+
+    // Combinez les résultats et retournez-les
+    res.status(200).json({
+      utilisateurs: utilisateurs.rows,
+      evenements: evenements.rows,
+    });
+  } catch (error) {
+    console.error('Erreur lors de la recherche :', error);
+    res.status(500).json({ error: 'Erreur serveur lors de la recherche.' });
+  }
+});
+
 
 module.exports = app; 
