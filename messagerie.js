@@ -183,8 +183,8 @@ app.post('/dernier-messages', async (req, res) => {
         m1.destinataire_id,
         m1.message,
         m1.date_envoye,
-        u.nom AS expediteur_nom,
-        u.prenom AS expediteur_prenom,
+        u.nom AS autre_utilisateur_nom,
+        u.prenom AS autre_utilisateur_prenom,
         u.photo_de_profil,
         EXTRACT(EPOCH FROM (NOW() - m1.date_envoye)) AS temps_ecoule
       FROM Messagerie m1
@@ -201,7 +201,10 @@ app.post('/dernier-messages', async (req, res) => {
         LEAST(m1.expediteur_id, m1.destinataire_id) = m2.pair_user_2 AND
         m1.date_envoye = m2.last_message_date
       )
-      INNER JOIN Utilisateur u ON u.id = m1.expediteur_id
+      INNER JOIN Utilisateur u ON u.id = CASE
+        WHEN m1.expediteur_id = $1 THEN m1.destinataire_id
+        ELSE m1.expediteur_id
+      END
       ORDER BY m1.date_envoye DESC;
     `;
 
@@ -227,16 +230,15 @@ app.post('/dernier-messages', async (req, res) => {
 
       return {
         message_id: message.message_id,
-        expediteur_id: message.expediteur_id,
-        destinataire_id: message.destinataire_id,
+        autre_utilisateur: {
+          id: message.expediteur_id === utilisateur_id ? message.destinataire_id : message.expediteur_id,
+          nom: message.autre_utilisateur_nom,
+          prenom: message.autre_utilisateur_prenom,
+          photo_de_profil: message.photo_de_profil
+        },
         message: message.message,
         date_envoye: message.date_envoye,
-        temps_ecoule: timeAgo,
-        expediteur: {
-          nom: message.expediteur_nom,
-          prenom: message.expediteur_prenom,
-          photo_de_profil: message.photo_de_profil
-        }
+        temps_ecoule: timeAgo
       };
     });
 
@@ -249,6 +251,7 @@ app.post('/dernier-messages', async (req, res) => {
     res.status(500).json({ error: 'Erreur du serveur.' });
   }
 });
+
 
 app.post('/amis/demande', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
