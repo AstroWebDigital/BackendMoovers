@@ -30,7 +30,7 @@
       margin-top: 5px;
     }
     .leaflet-control-zoom {
-      display: none; /* Supprime les boutons de zoom */
+      display: none !important; /* Supprime les boutons de zoom */
     }
   </style>
 </head>
@@ -53,8 +53,8 @@
     // Fonction pour récupérer les données depuis l'API
     async function fetchEvents() {
       try {
-        // Remplacez l'URL ci-dessous par l'URL correcte de votre API
-        const response = await fetch('https://backend-moovers.vercel.app/evenements'); 
+        // Remplacez l'URL par celle de votre API
+        const response = await fetch('https://backend-moovers.vercel.app/evenements');
         if (!response.ok) {
           throw new Error(`Erreur HTTP ! statut : ${response.status}`);
         }
