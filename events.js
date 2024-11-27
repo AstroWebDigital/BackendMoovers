@@ -1,9 +1,9 @@
 const express = require('express');
 const client = require('./db'); // Import de la connexion à la base de données
-const router = express.Router(); // Utilisation du router Express
+const router = express.Router(); // Utilisation de Router pour définir les routes
 
 // Route pour récupérer les événements
-router.get('/events', async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const result = await client.query(`
       SELECT 
@@ -25,5 +25,5 @@ router.get('/events', async (req, res) => {
   }
 });
 
-// Exporter le router pour utilisation dans `server.js`
+// Export du router pour utilisation dans `server.js`
 module.exports = router;

@@ -90,8 +90,7 @@ const userRoutes = require('./user');
 app.use('/utilisateur', userRoutes); // Ajouter le préfixe /utilisateur
 
 const eventsRoutes = require('./events');
-app.use('/evenements', eventsRoutes); // Ajouter le préfixe /evenements
-
+app.use('/evenements', eventsRoutes); // Préfixe pour les routes d'événements
 
 app.get('/carte', (req, res) => {
   res.sendFile(path.join(__dirname, 'carte.html')); // Assurez-vous que le fichier carte.html est bien présent
