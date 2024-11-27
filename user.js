@@ -145,7 +145,10 @@ app.delete('/delete', async (req, res) => {
 
 app.post('/infos', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
-  const { utilisateur_id } = req.body; // ID de l'utilisateur cible
+  const { utilisateur_id } = req.body;
+
+  console.log('Token reçu :', token);
+  console.log('ID utilisateur reçu :', utilisateur_id);
 
   if (!token) {
     return res.status(401).json({ error: 'Token non fourni. Accès non autorisé.' });
@@ -157,9 +160,8 @@ app.post('/infos', async (req, res) => {
 
   try {
     const decoded = jwt.verify(token, SECRET_KEY);
-    const utilisateur_connecte_id = decoded.id;
+    console.log('ID utilisateur connecté :', decoded.id);
 
-    // Requête SQL avec `date_inscription`
     const userQuery = `
       SELECT nom, prenom, photo_de_profil, date_inscription
       FROM utilisateur
@@ -182,12 +184,13 @@ app.post('/infos', async (req, res) => {
       },
     });
   } catch (err) {
+    console.error('Erreur serveur :', err);
     if (err.name === 'JsonWebTokenError') {
       return res.status(401).json({ error: 'Token invalide. Accès non autorisé.' });
     }
-    console.error('Erreur serveur :', err);
     res.status(500).json({ error: 'Erreur du serveur.' });
   }
 });
+
 
 module.exports = app; 
