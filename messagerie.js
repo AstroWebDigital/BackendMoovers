@@ -186,15 +186,15 @@ app.post('/dernier-messages', async (req, res) => {
     const utilisateur_id = decoded.id; // ID de l'utilisateur connecté
 
     // Récupérer le dernier message de chaque conversation avec les informations supplémentaires
-    const derniersMessagesQuery = `
+    const derniersMessagesQuery = 
       SELECT 
         m1.id AS message_id,
         m1.expediteur_id,
         m1.destinataire_id,
         m1.message,
         m1.date_envoye,
-        u.nom AS autre_utilisateur_nom,
-        u.prenom AS autre_utilisateur_prenom,
+        u.nom AS expediteur_nom,
+        u.prenom AS expediteur_prenom,
         u.photo_de_profil,
         EXTRACT(EPOCH FROM (NOW() - m1.date_envoye)) AS temps_ecoule
       FROM Messagerie m1
@@ -211,12 +211,9 @@ app.post('/dernier-messages', async (req, res) => {
         LEAST(m1.expediteur_id, m1.destinataire_id) = m2.pair_user_2 AND
         m1.date_envoye = m2.last_message_date
       )
-      INNER JOIN Utilisateur u ON u.id = CASE
-        WHEN m1.expediteur_id = $1 THEN m1.destinataire_id
-        ELSE m1.expediteur_id
-      END
+      INNER JOIN Utilisateur u ON u.id = m1.expediteur_id
       ORDER BY m1.date_envoye DESC;
-    `;
+    ;
 
     const derniersMessagesResult = await client.query(derniersMessagesQuery, [utilisateur_id]);
 
@@ -226,32 +223,37 @@ app.post('/dernier-messages', async (req, res) => {
       let timeAgo;
 
       if (secondsElapsed < 60) {
-        timeAgo = `${secondsElapsed} secondes`;
+        timeAgo = ${secondsElapsed} secondes;
       } else if (secondsElapsed < 3600) {
         const minutes = Math.floor(secondsElapsed / 60);
-        timeAgo = `${minutes} minute${minutes > 1 ? 's' : ''}`;
+        timeAgo = ${minutes} minute${minutes > 1 ? 's' : ''};
       } else if (secondsElapsed < 86400) {
         const hours = Math.floor(secondsElapsed / 3600);
-        timeAgo = `${hours} heure${hours > 1 ? 's' : ''}`;
+        timeAgo = ${hours} heure${hours > 1 ? 's' : ''};
       } else {
         const days = Math.floor(secondsElapsed / 86400);
-        timeAgo = `${days} jour${days > 1 ? 's' : ''}`;
+        timeAgo = ${days} jour${days > 1 ? 's' : ''};
       }
 
       return {
         message_id: message.message_id,
-        id: message.expediteur_id === utilisateur_id ? message.destinataire_id : message.expediteur_id,
-        nom: message.autre_utilisateur_nom,
-        prenom: message.autre_utilisateur_prenom,
-        photo_de_profil: message.photo_de_profil,
+        expediteur_id: message.expediteur_id,
+        destinataire_id: message.destinataire_id,
         message: message.message,
         date_envoye: message.date_envoye,
         temps_ecoule: timeAgo,
+        expediteur: {
+          nom: message.expediteur_nom,
+          prenom: message.expediteur_prenom,
+          photo_de_profil: message.photo_de_profil
+        }
       };
     });
 
-    // Envelopper la réponse dans un objet avec une clé "Response"
-    res.status(200).json({ Response: formattedMessages });
+    res.status(200).json({
+      message: 'Derniers messages récupérés avec succès.',
+      derniersMessages: formattedMessages,
+    });
   } catch (err) {
     console.error('Erreur lors de la récupération des derniers messages :', err);
     res.status(500).json({ error: 'Erreur du serveur.' });
