@@ -252,15 +252,14 @@ app.post('/dernier-messages', async (req, res) => {
       };
     });
 
-    res.status(200).json({
-      message: 'Derniers messages récupérés avec succès.',
-      derniersMessages: formattedMessages,
-    });
+    // Retourner directement le tableau
+    res.status(200).json(formattedMessages);
   } catch (err) {
     console.error('Erreur lors de la récupération des derniers messages :', err);
     res.status(500).json({ error: 'Erreur du serveur.' });
   }
 });
+
 
 app.post('/amis/demande', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
