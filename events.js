@@ -17,8 +17,23 @@ router.get('/', async (req, res) => {
       FROM evenement
     `);
 
-    // Retourne les événements sous forme de JSON
-    res.json(result.rows);
+    // Transformation des résultats en un format JSON spécifique
+    const markers = result.rows.map(event => ({
+      id: event.id,
+      position: {
+        lat: event.latitude,
+        lng: event.longitude
+      },
+      popup: {
+        title: event.titre,
+        description: event.description,
+        date: event.date,
+        time: event.heure
+      }
+    }));
+
+    // Retourne les marqueurs sous forme de JSON
+    res.json(markers);
   } catch (error) {
     console.error('Erreur lors de la récupération des événements :', error);
     res.status(500).json({ error: 'Une erreur est survenue lors de la récupération des événements.' });
